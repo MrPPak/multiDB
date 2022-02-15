@@ -1,0 +1,91 @@
+package com.example.multidb.database;
+
+import lombok.var;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionFactoryBean;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateProperties;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateSettings;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+import javax.sql.DataSource;
+import java.util.Objects;
+
+
+@EnableTransactionManagement // @Transactional 어노테이션을 찾아 트랜잭션 범위를 활성화하는 기능
+@MapperScan(
+        value = "com.example.multidb.mapper.femarket",
+        sqlSessionFactoryRef = "feMarketSqlSessionFactory",
+        annotationClass = com.example.multidb.database.FeMarketMapper.class
+)
+@EnableJpaRepositories(
+        basePackages = "com.example.multidb.repository.femarket",
+        entityManagerFactoryRef = "feMarketEntityManager",
+        transactionManagerRef = "feMarketTransactionManager"
+)
+@Configuration
+public class FeMarketDataConfig {
+    private final JpaProperties jpaProperties;
+    private final HibernateProperties hibernateProperties;
+
+    public FeMarketDataConfig(JpaProperties jpaProperties, HibernateProperties hibernateProperties) {
+        this.jpaProperties = jpaProperties;
+        this.hibernateProperties = hibernateProperties;
+    }
+
+    @ConfigurationProperties(prefix = "spring.datasource.femarketdb")
+    @Bean(name = "feMarketDataSource")
+    public DataSource feMarketDataSource() {
+        return DataSourceBuilder.create().build();
+    }
+
+    // MyBatis
+    @Bean(name = "feMarketSqlSessionFactory")
+    public SqlSessionFactory feMarketSqlSessionFactory(@Qualifier("feMarketDataSource") DataSource dataSource,
+                                                     ApplicationContext applicationContext) throws Exception {
+        final SqlSessionFactoryBean sessionFactoryBean = new SqlSessionFactoryBean();
+        sessionFactoryBean.setDataSource(dataSource);
+        sessionFactoryBean.setMapperLocations(applicationContext.getResources("classpath:/mapper/femarket/*.xml"));
+
+        SqlSessionFactory sqlSessionFactory = sessionFactoryBean.getObject();
+        org.apache.ibatis.session.Configuration configuration = sqlSessionFactory.getConfiguration();
+        configuration.setMapUnderscoreToCamelCase(true);
+        return sqlSessionFactory;
+    }
+
+    @Bean(name = "feMarketSqlSessionTemplate")
+    public SqlSessionTemplate feMarketSqlSessionTemplate(@Qualifier("feMarketSqlSessionFactory") SqlSessionFactory sqlSessionFactory) {
+        return new SqlSessionTemplate(sqlSessionFactory);
+    }
+
+    // JPA
+    @Bean(name = "feMarketEntityManager")
+    public LocalContainerEntityManagerFactoryBean feMarketEntityManager(EntityManagerFactoryBuilder builder) {
+        var properties = hibernateProperties.determineHibernateProperties(
+                jpaProperties.getProperties(), new HibernateSettings());
+        return builder.dataSource(feMarketDataSource())
+                .properties(properties)
+                .packages("com.example.multidb.domain.femarket")
+                .persistenceUnit("feMarketEntityManager")
+                .build();
+    }
+
+    @Bean(name = "feMarketTransactionManager")
+    PlatformTransactionManager feMarketTransactionManager(EntityManagerFactoryBuilder builder) {
+        return new JpaTransactionManager(Objects.requireNonNull(feMarketEntityManager(builder).getObject()));
+    }
+
+}
