@@ -39,6 +39,10 @@ public class FePoint {
         this.regtm = LocalDateTime.now();
     }
 
+    public void updateOrderId(String orderId) {
+        this.orderid = orderId;
+    }
+
     @NoArgsConstructor
     @Data
     public static class FePointId implements Serializable {

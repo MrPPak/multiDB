@@ -4,6 +4,7 @@ import com.example.multidb.domain.femarket.PdtStatic;
 import com.example.multidb.domain.fenote.FePoint;
 import com.example.multidb.repository.femarket.PdtStaticRepository;
 import com.example.multidb.repository.fenote.FePointRepository;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +12,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
 import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 public class JpaTransactionTest {
@@ -20,6 +24,12 @@ public class JpaTransactionTest {
 
     @Autowired
     FePointRepository fePointRepository;
+
+    @Autowired
+    EntityManager feMarketEntityManager;
+
+    @Autowired
+    EntityManager feNoteEntityManager;
 
     @BeforeEach
     void setUp() {
@@ -40,7 +50,6 @@ public class JpaTransactionTest {
 
     @Test
     @Transactional("feMarketTransactionManager")
-    @Commit
     void pdtStaticTest() {
         // given
         PdtStatic.PdtStaticId pdtStaticId = new PdtStatic.PdtStaticId("testShopId", "testPdtCode");
@@ -48,19 +57,35 @@ public class JpaTransactionTest {
                 .orElseThrow(RuntimeException::new);
 
         // when
-        pdtStatic.setRegtm(LocalDateTime.now());
+        int order3daysCnt = 4;
+        pdtStatic.updateOrder3daysCnt(order3daysCnt);
+        feMarketEntityManager.flush();
+        feMarketEntityManager.clear();
 
         // then
+        PdtStatic findPdtStatic = pdtStaticRepository.findById(pdtStaticId)
+                .orElseThrow(RuntimeException::new);
+        assertThat(findPdtStatic.getOrder3daysCnt()).isEqualTo(order3daysCnt);
     }
 
     @Test
     @Transactional("feNoteTransactionManager")
-    @Commit
     void fePointTest() {
-        FePoint.FePointId fePointId = new FePoint.FePointId("2111011548146502", 13);
-        FePoint fePoint = fePointRepository.findById(fePointId).get();
+        // given
+        FePoint.FePointId fePointId = new FePoint.FePointId("testUserId", 0);
+        FePoint fePoint = fePointRepository.findById(fePointId)
+                .orElseThrow(RuntimeException::new);
 
-        fePoint.setRegtm(LocalDateTime.now());
+        // when
+        String orderId = "updateOrderId";
+        fePoint.updateOrderId(orderId);
+        feNoteEntityManager.flush();
+        feNoteEntityManager.clear();
+
+        // then
+        FePoint findFePoint = fePointRepository.findById(fePointId)
+                .orElseThrow(RuntimeException::new);
+        assertThat(findFePoint.getOrderid()).isEqualTo(orderId);
     }
 
 }

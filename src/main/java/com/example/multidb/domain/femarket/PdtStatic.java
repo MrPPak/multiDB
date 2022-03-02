@@ -60,6 +60,10 @@ public class PdtStatic {
         this.regtm = LocalDateTime.now();
     }
 
+    public void updateOrder3daysCnt(int count) {
+        this.order3daysCnt = count;
+    }
+
     @NoArgsConstructor
     @Data
     public static class PdtStaticId implements Serializable {
