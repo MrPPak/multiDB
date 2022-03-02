@@ -29,14 +29,14 @@ public class FePoint {
 
     @Builder
     private FePoint(String userId, Integer pointNo, String orderid, Integer points,
-                    String useWay, String pointType, LocalDateTime regtm) {
+                    String useWay, String pointType) {
         this.userId = userId;
         this.pointNo = pointNo;
         this.orderid = orderid;
         this.points = points;
         this.useWay = useWay;
         this.pointType = pointType;
-        this.regtm = regtm;
+        this.regtm = LocalDateTime.now();
     }
 
     @NoArgsConstructor

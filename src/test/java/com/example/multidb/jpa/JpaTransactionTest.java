@@ -4,6 +4,7 @@ import com.example.multidb.domain.femarket.PdtStatic;
 import com.example.multidb.domain.fenote.FePoint;
 import com.example.multidb.repository.femarket.PdtStaticRepository;
 import com.example.multidb.repository.fenote.FePointRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,14 +21,36 @@ public class JpaTransactionTest {
     @Autowired
     FePointRepository fePointRepository;
 
+    @BeforeEach
+    void setUp() {
+        PdtStatic pdtStatic = PdtStatic.builder()
+                .shopid("testShopId")
+                .pdtCode("testPdtCode")
+                .order3daysCnt(3)
+                .build();
+        pdtStaticRepository.save(pdtStatic);
+
+        FePoint fePoint = FePoint.builder()
+                .userId("testUserId")
+                .pointNo(0)
+                .orderid("testOrderId")
+                .build();
+        fePointRepository.save(fePoint);
+    }
+
     @Test
     @Transactional("feMarketTransactionManager")
     @Commit
     void pdtStaticTest() {
-        PdtStatic.PdtStaticId pdtStaticId = new PdtStatic.PdtStaticId("20211108151833", "20211108151833-220209-000170");
-        PdtStatic pdtStatic = pdtStaticRepository.findById(pdtStaticId).get();
+        // given
+        PdtStatic.PdtStaticId pdtStaticId = new PdtStatic.PdtStaticId("testShopId", "testPdtCode");
+        PdtStatic pdtStatic = pdtStaticRepository.findById(pdtStaticId)
+                .orElseThrow(RuntimeException::new);
 
+        // when
         pdtStatic.setRegtm(LocalDateTime.now());
+
+        // then
     }
 
     @Test
